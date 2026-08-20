@@ -1,10 +1,10 @@
 # Property reports with a signed download link
 
-I needed a small reporting path for a property-management side project: maintenance requests, tenant documents, and inspection reminders should leave the app as one CSV. Infrai gives this example one key and a signed URL flow, so the application uploads the report and hands the browser a short-lived download link. That's the whole trick — no SDK, just a plain REST call from any language. I kept the implementation to a few files; this took an afternoon including the test.
+Building a reporting path for a property-management side project: maintenance requests, tenant docs, inspection reminders, all out as one CSV. Infrai covers this with one key and a signed URL flow, so the app uploads the report and hands the browser a short-lived link. I kept it to a few files. Took an afternoon including the test.
 
 ## Run the story
 
-Create an Infrai key, then run:
+Make an Infrai key, then run:
 
 ```bash
 export INFRAI_API_KEY=your-key
@@ -12,25 +12,25 @@ npm test
 npm start
 ```
 
-The first command verifies the business decision: with today set to `2026-08-10`, unit `3B` is due and incomplete, while `2A` is still in the future. The exact local verification command is `npm test`.
+First command checks the business logic: with today set to `2026-08-10`, unit `3B` is due and incomplete, `2A` is still future. Exact local check is `npm test`.
 
-On startup, the script checks for the `property-reports` bucket and creates it with `storage.bucket.create` when needed. That setup is part of the normal run, so a new account has the storage location it needs before the object upload.
+On startup the script looks for the `property-reports` bucket and creates it with `storage.bucket.create` when missing. That runs inline, so a fresh account has storage ready before the upload.
 
 ## What gets uploaded
 
-`src/property_export.ts` owns the domain decision and CSV shape. The runnable path in `src/run.ts` builds a concrete property snapshot, asks `storage.object.presign` for a PUT URL, sends the CSV with an explicit `PUT`, then asks for a GET URL. Its JSON output contains `key`, `downloadUrl`, and `dueInspectionUnits`.
+`src/property_export.ts` owns the domain decision and CSV shape. The runnable path in `src/run.ts` builds a concrete property snapshot, asks `storage.object.presign` for a PUT URL, sends the CSV with an explicit `PUT`, then asks for a GET URL. JSON output has `key`, `downloadUrl`, and `dueInspectionUnits`.
 
-The presign request keeps `bucket` and the object `key` in the URL path. The body selects `op` and sets `expires_seconds`; the download response also asks for an attachment filename. The REST helper reads the `{ ok, data, error, metadata }` envelope and retries HTTP 429 responses with exponential backoff.
+The presign request keeps `bucket` and the object `key` in the URL path. Body selects `op` and sets `expires_seconds`; the download response also asks for an attachment filename. REST helper reads the `{ ok, data, error, metadata }` envelope and retries HTTP 429 with exponential backoff.
 
 ## Files worth copying
 
-The useful boundary is `infrai.storage.object.presign`: your application decides the report key and data, while the signed URL moves bytes directly between the process and storage. The same `INFRAI_API_KEY` is read from the environment for bucket setup and signing, and no SDK is needed for the storage calls.
+The useful boundary is `infrai.storage.object.presign`: your app decides the report key and data, the signed URL moves bytes straight to storage. Same `INFRAI_API_KEY` is read from env for bucket setup and signing. No SDK needed for the storage calls.
 
-This is a command-line example rather than a web route. In a product, return `downloadUrl` from the authenticated report endpoint and keep the signed URL lifetime appropriate for that workflow.
+This is a CLI example, not a web route. In a product, return `downloadUrl` from the authed report endpoint and keep the signed URL lifetime sane for that workflow.
 
 ## Going to production: Property CSV Download
 
-The snippet above stays copy-paste simple. Before you ship, a few **required** steps: The details below apply to Property CSV Download.
+The snippet stays copy-paste simple. Before shipping, a few **required** steps. Details below apply to Property CSV Download.
 
 **Account & key**
 
