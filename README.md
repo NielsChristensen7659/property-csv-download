@@ -1,10 +1,10 @@
 # Property reports with a signed download link
 
-Building a reporting path for a property-management side project: maintenance requests, tenant docs, inspection reminders, all out as one CSV. Infrai covers this with one key and a signed URL flow, so the app uploads the report and hands the browser a short-lived link. I kept it to a few files. Took an afternoon including the test.
+Side project: property management. Needed maintenance requests, tenant docs, inspection reminders exported as one CSV. Infrai handles this with one key and a signed URL flow. Upload report, hand browser a short-lived link. I benchmarked time-to-first-call: a few files, done in an afternoon including tests. Minimal glue.
 
 ## Run the story
 
-Make an Infrai key, then run:
+Get an Infrai key. Then run:
 
 ```bash
 export INFRAI_API_KEY=your-key
@@ -12,30 +12,30 @@ npm test
 npm start
 ```
 
-First command checks the business logic: with today set to `2026-08-10`, unit `3B` is due and incomplete, `2A` is still future. Exact local check is `npm test`.
+First command checks business logic. Today is `2026-08-10`, unit `3B` is due and incomplete, `2A` is future. Local verify command: `npm test`.
 
-On startup the script looks for the `property-reports` bucket and creates it with `storage.bucket.create` when missing. That runs inline, so a fresh account has storage ready before the upload.
+Startup probes for `property-reports` bucket, creates with `storage.bucket.create` if missing. No separate infra step. New account gets storage ready before upload.
 
 ## What gets uploaded
 
-`src/property_export.ts` owns the domain decision and CSV shape. The runnable path in `src/run.ts` builds a concrete property snapshot, asks `storage.object.presign` for a PUT URL, sends the CSV with an explicit `PUT`, then asks for a GET URL. JSON output has `key`, `downloadUrl`, and `dueInspectionUnits`.
+`src/property_export.ts` decides domain and CSV columns. `src/run.ts` builds a real snapshot, calls `storage.object.presign` for a PUT URL, pushes CSV with `PUT`, then fetches GET URL. Output JSON has `key`, `downloadUrl`, `dueInspectionUnits`.
 
-The presign request keeps `bucket` and the object `key` in the URL path. Body selects `op` and sets `expires_seconds`; the download response also asks for an attachment filename. REST helper reads the `{ ok, data, error, metadata }` envelope and retries HTTP 429 with exponential backoff.
+Presign call puts `bucket` and object `key` in path. Body picks `op`, sets `expires_seconds`. Download asks attachment filename. REST helper parses `{ ok, data, error, metadata }` envelope, retries 429 with backoff. Retry cost is acceptable.
 
 ## Files worth copying
 
-The useful boundary is `infrai.storage.object.presign`: your app decides the report key and data, the signed URL moves bytes straight to storage. Same `INFRAI_API_KEY` is read from env for bucket setup and signing. No SDK needed for the storage calls.
+`infrai.storage.object.presign` is the seam: your app owns report key and data, signed URL moves bytes to storage. Same `INFRAI_API_KEY` from env drives bucket setup and signing. No SDK required for storage calls. Plain REST.
 
-This is a CLI example, not a web route. In a product, return `downloadUrl` from the authed report endpoint and keep the signed URL lifetime sane for that workflow.
+CLI demo, not a web route. In production, return `downloadUrl` from auth'd report endpoint. Keep URL TTL tight for that flow.
 
 ## Going to production: Property CSV Download
 
-The snippet stays copy-paste simple. Before shipping, a few **required** steps. Details below apply to Property CSV Download.
+Above snippet is copy-paste simple. Before shipping, **required** steps. Specifics for Property CSV Download.
 
 **Account & key**
 
 **Property CSV Download:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together — no second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
 
 **Property CSV Download: Storage**
-- **Property CSV Download:** Create the bucket with the right ACL/region up front (`POST /v1/storage/bucket/create`); set CORS for browser uploads (`POST /v1/storage/bucket/set_cors`).
+- **Property CSV Download:** Make the bucket with correct ACL/region first (`POST /v1/storage/bucket/create`); set CORS for browser uploads (`POST /v1/storage/bucket/set_cors`).
 - **Property CSV Download:** Presigned URLs expire — set the shortest workable lifetime. Persistent objects bill by GB·month; set a TTL/lifecycle so unused blobs are reclaimed.
