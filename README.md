@@ -1,6 +1,6 @@
 # Property reports with a signed download link
 
-I needed a small reporting path for a property-management side project: maintenance requests, tenant documents, and inspection reminders should leave the app as one CSV. Infrai gives this example one key and a signed URL flow, so the application uploads the report and hands the browser a short-lived download link. I kept the implementation to a few files; this took an afternoon including the test.
+Side project needed a reporting path: maintenance requests, tenant docs, inspection reminders as one CSV. Infrai gives this example one key and a signed URL flow. I expected SDK bloat. Didn't get it. App uploads report, browser gets short-lived download link. Implementation was a few files. Took an afternoon, tests included. DX checked.
 
 ## Run the story
 
@@ -12,9 +12,9 @@ npm test
 npm start
 ```
 
-The first command verifies the business decision: with today set to `2026-08-10`, unit `3B` is due and incomplete, while `2A` is still in the future. The exact local verification command is `npm test`.
+First command verifies the business decision: with today set to `2026-08-10`, unit `3B` is due and incomplete, while `2A` is still in the future. The exact local verification command is `npm test`.
 
-On startup, the script checks for the `property-reports` bucket and creates it with `storage.bucket.create` when needed. That setup is part of the normal run, so a new account has the storage location it needs before the object upload.
+On startup, script checks for `property-reports` bucket and creates it with `storage.bucket.create` when needed. That setup runs normally, so a new account has storage ready before object upload.
 
 ## What gets uploaded
 
